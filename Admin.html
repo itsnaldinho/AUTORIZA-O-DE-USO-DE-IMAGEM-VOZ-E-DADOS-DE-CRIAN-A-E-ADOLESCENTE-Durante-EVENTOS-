@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #1d976c 0%, #93f9b9 100%);
+        color: #333;
+        padding: 20px;
+        display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0;
+      }
+      .container {
+        background: #ffffff; padding: 40px 30px; border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 550px;
+      }
+      h2 { color: #1d976c; margin: 0; font-size: 24px; text-align: center;}
+      label { display: block; margin-top: 15px; font-weight: 600; color: #444; }
+      input { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid #ccd0d5; border-radius: 6px; box-sizing: border-box; }
+      
+      .date-row { display: flex; gap: 10px; margin-top: 8px; }
+      .date-row input { margin-top: 0; }
+      .btn-remover { background: #e74c3c; color: white; border: none; padding: 0 15px; border-radius: 6px; cursor: pointer; font-weight: bold;}
+      .btn-add { background: #3498db; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-top: 10px; font-size: 14px;}
+      
+      button.btn-submit {
+        width: 100%; margin-top: 30px; padding: 14px; background-color: #1d976c; color: white;
+        border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold;
+      }
+      button.btn-submit:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+      #status { display: none; text-align: center; margin-top: 15px; color: #1d976c; font-weight: bold; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Criar Novo Evento</h2>
+      
+      <form id="formAdmin" onsubmit="salvar(event)">
+        <label for="nomeEvento">Nome do Evento:</label>
+        <input type="text" id="nomeEvento" required placeholder="Ex: Acampamento de Inverno">
+        
+        <label>Datas do Evento:</label>
+        <div id="datasContainer">
+          <div class="date-row">
+            <input type="date" class="data-input" required>
+          </div>
+        </div>
+        <button type="button" class="btn-add" onclick="addDate()">+ Adicionar outro dia</button>
+        
+        <button type="submit" class="btn-submit" id="btnSalvar">Salvar Evento</button>
+        <div id="status">Salvando...</div>
+      </form>
+    </div>
+
+    <script>
+      function addDate() {
+        const container = document.getElementById('datasContainer');
+        const div = document.createElement('div');
+        div.className = 'date-row';
+        div.innerHTML = `
+          <input type="date" class="data-input" required>
+          <button type="button" class="btn-remover" onclick="this.parentElement.remove()">X</button>
+        `;
+        container.appendChild(div);
+      }
+
+      function salvar(event) {
+        event.preventDefault();
+        
+        const btnSalvar = document.getElementById('btnSalvar');
+        const status = document.getElementById('status');
+        btnSalvar.disabled = true;
+        status.style.display = 'block';
+        status.innerText = 'Salvando na planilha...';
+
+        const nome = document.getElementById('nomeEvento').value;
+        const inputsDatas = document.querySelectorAll('.data-input');
+        
+        let datasArray = [];
+        inputsDatas.forEach(input => {
+          if (input.value) datasArray.push(input.value);
+        });
+
+        // Chama o servidor para salvar
+        google.script.run
+          .withSuccessHandler(function(resposta) {
+            status.innerText = resposta;
+            document.getElementById('formAdmin').reset();
+            setTimeout(() => { 
+              btnSalvar.disabled = false; 
+              status.style.display = 'none'; 
+              // Reseta os campos de data para ficar só um
+              document.getElementById('datasContainer').innerHTML = '<div class="date-row"><input type="date" class="data-input" required></div>';
+            }, 3000);
+          })
+          .withFailureHandler(function(erro) {
+            alert("Erro ao salvar: " + erro);
+            btnSalvar.disabled = false;
+            status.style.display = 'none';
+          })
+          .salvarEvento(nome, datasArray);
+      }
+    </script>
+  </body>
+</html>
